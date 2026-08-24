@@ -42,6 +42,21 @@ def get_asset_path(filename):
     return None
 
 
+def get_audio_path(filename):
+    """Finds audio files in the Assets/audio folder across launch locations."""
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.join(base_dir, "audio", filename),
+        os.path.join(base_dir, "Assets", "audio", filename),
+        os.path.join(os.getcwd(), "audio", filename),
+        os.path.join(os.getcwd(), "Assets", "audio", filename),
+    ]
+    for candidate in candidates:
+        if os.path.exists(candidate):
+            return candidate
+    return None
+
+
 # --- PARTICLE SYSTEM ---
 class Particle:
     __slots__ = (
@@ -563,6 +578,10 @@ class FallingObject:
 class SpaceDodgeGame:
     def __init__(self):
         pygame.init()
+        try:
+            pygame.mixer.init()
+        except pygame.error as err:
+            print(f"Warning: Audio unavailable: {err}")
         pygame.display.set_caption("Meteor Space Dodge")
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         self.clock = pygame.time.Clock()
@@ -591,6 +610,8 @@ class SpaceDodgeGame:
         self.data = self.load_data()
         self.volume = self.data["volume"]
         self.control_scheme = self.data["controls"]
+        self.audio = self.load_audio()
+        self.set_audio_volume()
         self.state = "menu"
         self.menu_index = 0
         self.settings_index = 0
@@ -624,6 +645,37 @@ class SpaceDodgeGame:
             except Exception as err:
                 print(f"Warning: Failed to load spaceship image: {err}")
         return None
+
+    def load_audio(self):
+        sounds = {}
+        for name in ("damage", "victory"):
+            path = get_audio_path(f"{name}.mp3")
+            if path:
+                try:
+                    sounds[name] = pygame.mixer.Sound(path)
+                except pygame.error as err:
+                    print(f"Warning: Failed to load {name} sound: {err}")
+
+        music_path = get_audio_path("background.mp3")
+        if music_path:
+            try:
+                pygame.mixer.music.load(music_path)
+                pygame.mixer.music.play(-1)
+            except pygame.error as err:
+                print(f"Warning: Failed to load background music: {err}")
+        return sounds
+
+    def set_audio_volume(self):
+        if not pygame.mixer.get_init():
+            return
+        pygame.mixer.music.set_volume(self.volume)
+        for sound in self.audio.values():
+            sound.set_volume(self.volume)
+
+    def play_sound(self, name):
+        sound = self.audio.get(name)
+        if sound:
+            sound.play()
 
     def load_data(self):
         defaults = {
@@ -769,11 +821,13 @@ class SpaceDodgeGame:
             elif obj.kind == "meteor":
                 if self.shield_time > 0:
                     # Shield absorbs & deflects impact!
+                    self.play_sound("damage")
                     self.particles.emit_explosion(obj.rect.centerx, obj.rect.centery, radius=32, count=22)
                     self.trigger_shake(0.35)
                     self.trigger_flash(CYAN, 120)
                 elif self.invulnerable_time <= 0:
                     # Direct Hit!
+                    self.play_sound("damage")
                     self.lives -= 1
                     self.invulnerable_time = 1.4
                     self.trigger_shake(0.7)
@@ -1106,6 +1160,7 @@ class SpaceDodgeGame:
                 if self.settings_index == 0:
                     delta = -0.1 if event.key == pygame.K_LEFT else 0.1
                     self.volume = max(0.0, min(1.0, round(self.volume + delta, 1)))
+                    self.set_audio_volume()
                 else:
                     self.control_scheme = "A / D" if self.control_scheme == "Arrows" else "Arrows"
                 self.save_data()
