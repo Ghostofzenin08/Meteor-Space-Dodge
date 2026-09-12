@@ -7,10 +7,18 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
 import requests
 
-FIREBASE_API_KEY = "AIzaSyA-ULQFhAgiO5TUyQkCKIp_aNJ0EUM6kRA"
-FIREBASE_AUTH_DOMAIN = "meteor-dodge-game.firebaseapp.com"
-FIREBASE_PROJECT_ID = "meteor-dodge-game"
-FIREBASE_APP_ID = "1:387220208655:web:6977f2c563c2fec847377a"
+try:
+    from dotenv import load_dotenv
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    load_dotenv(os.path.join(root_dir, ".env"))
+    load_dotenv()
+except ImportError:
+    pass
+
+FIREBASE_API_KEY = os.environ.get("FIREBASE_API_KEY", "AIzaSyA-ULQFhAgiO5TUyQkCKIp_aNJ0EUM6kRA")
+FIREBASE_AUTH_DOMAIN = os.environ.get("FIREBASE_AUTH_DOMAIN", "meteor-dodge-game.firebaseapp.com")
+FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "meteor-dodge-game")
+FIREBASE_APP_ID = os.environ.get("FIREBASE_APP_ID", "1:387220208655:web:6977f2c563c2fec847377a")
 
 SESSION_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pilot_session.json")
 

@@ -3,6 +3,12 @@ import sys
 from flask import Flask, request, jsonify, render_template_string
 from flask_cors import CORS
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # Add Assets directory to path to reuse DB and Auth managers
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, "Assets")

@@ -3,10 +3,15 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 import threading
 
-NEON_DB_URL = os.environ.get(
-    "METEOR_DODGE_DB_URL",
-    "postgresql://neondb_owner:npg_3Mwy8uNStxsb@ep-empty-shape-atx8rqzu-pooler.c-9.us-east-1.aws.neon.tech/neondb?sslmode=require"
-)
+try:
+    from dotenv import load_dotenv
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    load_dotenv(os.path.join(root_dir, ".env"))
+    load_dotenv()
+except ImportError:
+    pass
+
+NEON_DB_URL = os.environ.get("METEOR_DODGE_DB_URL", "")
 
 
 class DatabaseManager:
@@ -14,11 +19,17 @@ class DatabaseManager:
         self.db_url = db_url or NEON_DB_URL
         self._lock = threading.Lock()
         self.is_connected = False
-        self.init_db()
+        if self.db_url:
+            self.init_db()
+        else:
+            print("[NeonDB] Info: METEOR_DODGE_DB_URL not found in environment. Running in local fallback mode.")
 
     def _get_connection(self):
         """Creates a fresh connection to Neon PostgreSQL."""
+        if not self.db_url:
+            raise ValueError("METEOR_DODGE_DB_URL is not set.")
         url = self.db_url
+
         if "channel_binding=" in url:
             url = url.split("&channel_binding=")[0].split("?channel_binding=")[0]
             if "?" not in url and "sslmode=require" in self.db_url:
