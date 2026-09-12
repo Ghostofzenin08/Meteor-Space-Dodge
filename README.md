@@ -44,9 +44,11 @@ Avoid incoming meteors, stay alive, and improve your high score with every attem
 ## 🛠️ Technologies Used
 
 - **Python 3**
-- **Pygame**
-- **JSON** — for saving high scores
-- **Git & GitHub** — version control and project hosting
+- **Pygame** — 2D game engine
+- **Flask & Flask-CORS** — Cloud backend REST API service & Web Dashboard
+- **Neon PostgreSQL** — Serverless cloud database for global leaderboards & user profiles
+- **Firebase Authentication** — Secure pilot identity management (Google OAuth & Email/Password)
+- **JSON** — Local fallback and session cache
 
 ## 📂 Project Structure
 
@@ -54,48 +56,39 @@ Avoid incoming meteors, stay alive, and improve your high score with every attem
 Meteor-Space-Dodge/
 │
 ├── Assets/
-│   ├── images/
-│   └── sounds/
+│   ├── audio/                     # Sound effects & music
+│   ├── images/                    # Spaceship & background textures
+│   ├── main.py                    # Pygame desktop game client
+│   ├── db_manager.py              # Neon PostgreSQL integration layer
+│   ├── auth_manager.py            # Firebase Authentication integration
+│   └── space_dodge_high_score.json # Local scores and backup
 │
-├── .gitignore
-├── LICENSE
-├── main.py
+├── server.py                      # Flask REST API & Web Dashboard
+├── requirements.txt               # Dependencies
 └── README.md
 ```
 
-> The exact filenames and asset structure may change as the project evolves.
-
 ## 🚀 Getting Started
 
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/Ghostofzenin08/Meteor-Space-Dodge.git
-```
-
-### 2. Navigate to the project
-
-```bash
-cd Meteor-Space-Dodge
-```
-
-### 3. Install Pygame
-
-```bash
-pip install pygame
-```
-
-Or, if you have a `requirements.txt` file:
+### 1. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Run the game
+### 2. Run the Desktop Game
 
 ```bash
-python main.py
+python Assets/main.py
 ```
+
+### 3. (Optional) Run the Flask Backend & Web Dashboard
+
+```bash
+python server.py
+```
+Open [http://localhost:5000](http://localhost:5000) in your browser to view the live Neon DB leaderboard and API service health.
+
 
 ## 🎯 Gameplay
 
