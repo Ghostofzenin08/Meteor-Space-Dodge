@@ -1120,8 +1120,9 @@ class SpaceDodgeGame:
                 int(220 + 35 * title_glow),
                 255,
             )
-            self.centered("METEOR SPACE DODGE", self.large_font, 190, title_col)
-            self.centered("Navigate the cosmos. Dodge incoming meteors.", self.font, 255, (200, 220, 255))
+            self.centered("METEOR SPACE DODGE", self.large_font, 180, title_col)
+            self.centered("Created by ZeninXParth (Ghostofzenin08 x parthongit89)", self.small_font, 230, GOLD)
+            self.centered("Navigate the cosmos. Dodge incoming meteors.", self.font, 265, (200, 220, 255))
             self.options(
                 ["Start Mission", "Pilot Account", "Leaderboard & Stats", "Settings", "Quit"],
                 self.menu_index,
@@ -1129,10 +1130,13 @@ class SpaceDodgeGame:
             )
             self.centered("Arrow keys: navigate   |   Enter / Space: confirm", self.small_font, 610, MUTED)
 
-            # Pilot badge & database status
+            # Pilot badge & database status with Founder VIP recognition
             pilot_name = self.auth.current_user["display_name"] if (self.auth and self.auth.current_user) else "Guest Pilot"
+            is_founder = any(k in pilot_name.lower() for k in ("zenin", "parth", "ghost"))
+            badge = " [👑 FOUNDER]" if is_founder else ""
             neon_status = "Online (Neon DB)" if (self.db and self.db.is_connected) else "Connecting / Local"
-            self.centered(f"PILOT: {pilot_name}   |   DATABASE: {neon_status}", self.small_font, 650, CYAN)
+            self.centered(f"PILOT: {pilot_name}{badge}   |   DATABASE: {neon_status}", self.small_font, 650, CYAN)
+            self.centered("Official Store: zeninxparth.itch.io", self.small_font, 685, MUTED)
 
         elif self.state == "auth":
             self.particles.draw(self.screen)

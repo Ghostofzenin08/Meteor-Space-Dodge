@@ -153,7 +153,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
     <div class="container">
         <header>
             <h1>☄️ Meteor Space Dodge</h1>
-            <p style="color: var(--text-muted); margin-bottom: 15px;">Flask Backend Services & Cloud Synchronization</p>
+            <p style="color: #ffd741; margin-bottom: 6px; font-weight: 600;">Developed by ZeninXParth (Ghostofzenin08 x parthongit89)</p>
+            <p style="color: var(--text-muted); margin-bottom: 15px;">Flask Backend Services & Cloud Synchronization | <a href="https://zeninxparth.itch.io" target="_blank" style="color: var(--cyan); text-decoration: none;">zeninxparth.itch.io</a></p>
             <div>
                 <span class="badge online">Neon DB: Connected</span>
                 <span class="badge">Firebase: {{ firebase_project }}</span>
