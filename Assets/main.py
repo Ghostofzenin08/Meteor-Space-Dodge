@@ -3,8 +3,11 @@ import math
 import os
 import random
 import sys
+import threading
 
 import pygame
+from db_manager import DatabaseManager
+from auth_manager import AuthManager
 
 # --- CONSTANTS & CONFIGURATION ---
 WIDTH, HEIGHT, FPS = 1000, 800, 60
@@ -27,8 +30,8 @@ PURPLE = (180, 90, 255)
 
 
 def get_asset_path(filename):
-    """Finds asset path reliably across different execution working directories."""
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    """Finds asset path reliably across different execution working directories and PyInstaller bundles."""
+    base_dir = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
     candidates = [
         os.path.join(base_dir, "images", filename),
         os.path.join(base_dir, "Assets", "images", filename),
@@ -43,8 +46,8 @@ def get_asset_path(filename):
 
 
 def get_audio_path(filename):
-    """Finds audio files in the Assets/audio folder across launch locations."""
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    """Finds audio files in the Assets/audio folder across launch locations and PyInstaller bundles."""
+    base_dir = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
     candidates = [
         os.path.join(base_dir, "audio", filename),
         os.path.join(base_dir, "Assets", "audio", filename),
@@ -606,6 +609,16 @@ class SpaceDodgeGame:
         self.game_time = 0.0
         self.bg_scroll_y = 0.0
 
+        # Cloud DB & Authentication
+        self.auth = AuthManager()
+        self.db = DatabaseManager()
+        self.leaderboard_cache = []
+        self.auth_menu_index = 0
+        self.auth_input_mode = "select"  # "select", "login", "register"
+        self.auth_inputs = {"email": "", "password": ""}
+        self.active_input_field = "email"
+        self.auth_feedback = ("", WHITE)
+
         # Save data & menu states
         self.data = self.load_data()
         self.volume = self.data["volume"]
@@ -617,6 +630,7 @@ class SpaceDodgeGame:
         self.settings_index = 0
 
         self.reset_game()
+        self.refresh_leaderboard()
 
     @property
     def high_score(self):
@@ -692,6 +706,11 @@ class SpaceDodgeGame:
                 defaults.update(json.load(file))
         except (OSError, ValueError, json.JSONDecodeError):
             pass
+
+        if hasattr(self, "auth") and self.auth.current_user and hasattr(self, "db"):
+            user = self.auth.current_user
+            cloud_data = self.db.get_user_data(user["uid"], user.get("email", ""), initial_seed=defaults)
+            defaults.update(cloud_data)
         return defaults
 
     def save_data(self):
@@ -702,6 +721,31 @@ class SpaceDodgeGame:
                 json.dump(self.data, file, indent=2)
         except OSError:
             pass
+
+        if hasattr(self, "db"):
+            user = self.auth.current_user if hasattr(self, "auth") else None
+            user_uid = user["uid"] if user else "guest_pilot"
+            email = user.get("email", "guest@meteor.space") if user else "guest@meteor.space"
+            self.db.save_user_data_async(user_uid, self.data, email=email)
+
+    def refresh_leaderboard(self):
+        def _fetch():
+            lb = self.db.get_leaderboard(limit=5)
+            if lb:
+                self.leaderboard_cache = lb
+        threading.Thread(target=_fetch, daemon=True).start()
+
+    def sync_user_session(self):
+        """Called whenever auth changes to sync player stats."""
+        user = self.auth.current_user
+        if user:
+            cloud_data = self.db.get_user_data(user["uid"], user.get("email", ""), initial_seed=self.data)
+            self.data.update(cloud_data)
+            self.volume = self.data["volume"]
+            self.control_scheme = self.data["controls"]
+            self.set_audio_volume()
+            self.save_data()
+        self.refresh_leaderboard()
 
     def trigger_shake(self, amount=0.5):
         """Adds trauma for screen shake."""
@@ -744,11 +788,10 @@ class SpaceDodgeGame:
 
     def update_playing(self, dt):
         keys = pygame.key.get_pressed()
-        left_key, right_key = (
-            (pygame.K_LEFT, pygame.K_RIGHT) if self.control_scheme == "Arrows" else (pygame.K_a, pygame.K_d)
-        )
+        move_left = keys[pygame.K_LEFT] or keys[pygame.K_a]
+        move_right = keys[pygame.K_RIGHT] or keys[pygame.K_d]
 
-        move_dir = int(keys[right_key]) - int(keys[left_key])
+        move_dir = int(move_right) - int(move_left)
         self.player.x += round(move_dir * PLAYER_SPEED * dt)
         self.player.clamp_ip(pygame.Rect(0, 0, WIDTH, HEIGHT))
 
@@ -841,9 +884,13 @@ class SpaceDodgeGame:
 
     def finish_game(self):
         self.score = int(self.score)
+        is_new_high = self.score > self.high_score
         self.data["high_score"] = max(self.high_score, self.score)
         self.data["highest_level"] = max(self.data["highest_level"], self.level)
+        if is_new_high:
+            self.play_sound("victory")
         self.save_data()
+        self.refresh_leaderboard()
         self.state = "game_over"
 
     def centered(self, text, font, y, color=WHITE, shadow=True):
@@ -1053,6 +1100,13 @@ class SpaceDodgeGame:
         # HUD
         self.draw_hud()
 
+    def _on_google_done(self, success, msg):
+        if success:
+            self.sync_user_session()
+            self.auth_feedback = (f"Connected as {self.auth.current_user['display_name']}!", GOLD)
+        else:
+            self.auth_feedback = (msg or "Google sign-in cancelled", RED)
+
     def draw(self, dt):
         # Background & Starfield
         self.draw_background(dt)
@@ -1066,10 +1120,70 @@ class SpaceDodgeGame:
                 int(220 + 35 * title_glow),
                 255,
             )
-            self.centered("METEOR SPACE DODGE", self.large_font, 210, title_col)
-            self.centered("Navigate the cosmos. Dodge incoming meteors.", self.font, 280, (200, 220, 255))
-            self.options(["Start Mission", "Settings", "Statistics", "Quit"], self.menu_index, 375)
-            self.centered("Arrow keys: navigate   |   Enter / Space: confirm", self.small_font, 630, MUTED)
+            self.centered("METEOR SPACE DODGE", self.large_font, 190, title_col)
+            self.centered("Navigate the cosmos. Dodge incoming meteors.", self.font, 255, (200, 220, 255))
+            self.options(
+                ["Start Mission", "Pilot Account", "Leaderboard & Stats", "Settings", "Quit"],
+                self.menu_index,
+                335,
+            )
+            self.centered("Arrow keys: navigate   |   Enter / Space: confirm", self.small_font, 610, MUTED)
+
+            # Pilot badge & database status
+            pilot_name = self.auth.current_user["display_name"] if (self.auth and self.auth.current_user) else "Guest Pilot"
+            neon_status = "Online (Neon DB)" if (self.db and self.db.is_connected) else "Connecting / Local"
+            self.centered(f"PILOT: {pilot_name}   |   DATABASE: {neon_status}", self.small_font, 650, CYAN)
+
+        elif self.state == "auth":
+            self.particles.draw(self.screen)
+            self.centered("PILOT AUTHENTICATION", self.large_font, 160, CYAN)
+
+            if self.auth_input_mode == "select":
+                current_pilot = self.auth.current_user["display_name"] if self.auth.current_user else "Not logged in"
+                self.centered(f"Active Profile: {current_pilot}", self.font, 230, GOLD)
+
+                auth_options = [
+                    "Sign In with Google (Browser)",
+                    "Sign In with Email & Password",
+                    "Register New Pilot (Email & Password)",
+                    "Play as Guest",
+                    "Sign Out",
+                    "Return to Menu",
+                ]
+                self.options(auth_options, self.auth_menu_index, 290)
+
+                msg, col = self.auth_feedback
+                if msg:
+                    self.centered(msg, self.small_font, 610, col)
+                else:
+                    self.centered("Choose an option   |   Esc: return to menu", self.small_font, 610, MUTED)
+
+            elif self.auth_input_mode in ("login", "register"):
+                title = "PILOT SIGN IN" if self.auth_input_mode == "login" else "REGISTER NEW PILOT"
+                self.centered(title, self.font, 225, GOLD)
+
+                # Email field box
+                em_col = CYAN if self.active_input_field == "email" else MUTED
+                self.centered("Email Address:", self.small_font, 275, em_col)
+                pygame.draw.rect(self.screen, (15, 25, 55), (WIDTH // 2 - 180, 295, 360, 42), border_radius=6)
+                pygame.draw.rect(self.screen, em_col, (WIDTH // 2 - 180, 295, 360, 42), 2, border_radius=6)
+                em_surf = self.font.render(self.auth_inputs["email"] + ("|" if self.active_input_field == "email" else ""), True, WHITE)
+                self.screen.blit(em_surf, (WIDTH // 2 - 170, 305))
+
+                # Password field box
+                pw_col = CYAN if self.active_input_field == "password" else MUTED
+                self.centered("Password:", self.small_font, 360, pw_col)
+                pygame.draw.rect(self.screen, (15, 25, 55), (WIDTH // 2 - 180, 380, 360, 42), border_radius=6)
+                pygame.draw.rect(self.screen, pw_col, (WIDTH // 2 - 180, 380, 360, 42), 2, border_radius=6)
+                masked_pw = "*" * len(self.auth_inputs["password"]) + ("|" if self.active_input_field == "password" else "")
+                pw_surf = self.font.render(masked_pw, True, WHITE)
+                self.screen.blit(pw_surf, (WIDTH // 2 - 170, 390))
+
+                # Instructions & Feedback
+                self.centered("Tab: switch field   |   Enter: submit   |   Esc: cancel", self.small_font, 460, MUTED)
+                msg, col = self.auth_feedback
+                if msg:
+                    self.centered(msg, self.small_font, 510, col)
 
         elif self.state == "settings":
             self.particles.draw(self.screen)
@@ -1083,12 +1197,56 @@ class SpaceDodgeGame:
 
         elif self.state == "statistics":
             self.particles.draw(self.screen)
-            self.centered("MISSION RECORDS", self.large_font, 200, CYAN)
-            self.centered(f"High Score: {self.data['high_score']}", self.font, 320, GOLD)
-            self.centered(f"Highest Level Reached: {self.data['highest_level']}", self.font, 370)
-            self.centered(f"Total Meteors Dodged: {self.data['meteors_dodged']}", self.font, 420)
-            self.centered(f"Total Missions Launched: {self.data['games_played']}", self.font, 470)
-            self.centered("Press Esc or Enter to return", self.small_font, 570, MUTED)
+            self.centered("MISSION RECORDS & GLOBAL LEADERBOARD", self.large_font, 140, CYAN)
+
+            box_w, box_h = 420, 360
+            left_x = 70
+            right_x = 510
+            y_start = 220
+
+            # Left Box - Personal Pilot Records
+            p_surf = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+            p_surf.fill((10, 20, 45, 190))
+            pygame.draw.rect(p_surf, (35, 75, 140), p_surf.get_rect(), width=1, border_radius=10)
+            self.screen.blit(p_surf, (left_x, y_start))
+
+            pilot_name = self.auth.current_user["display_name"] if (self.auth and self.auth.current_user) else "Guest Pilot"
+            title_p = self.font.render(f"PILOT: {pilot_name}", True, GOLD)
+            self.screen.blit(title_p, (left_x + 20, y_start + 20))
+
+            p_stats = [
+                f"High Score: {self.data['high_score']}",
+                f"Highest Level: {self.data['highest_level']}",
+                f"Meteors Dodged: {self.data['meteors_dodged']}",
+                f"Missions Launched: {self.data['games_played']}",
+            ]
+            for idx, stat in enumerate(p_stats):
+                stat_surf = self.font.render(stat, True, WHITE)
+                self.screen.blit(stat_surf, (left_x + 25, y_start + 80 + idx * 45))
+
+            # Right Box - Cloud Neon DB Leaderboard
+            l_surf = pygame.Surface((box_w, box_h), pygame.SRCALPHA)
+            l_surf.fill((10, 20, 45, 190))
+            pygame.draw.rect(l_surf, (35, 75, 140), l_surf.get_rect(), width=1, border_radius=10)
+            self.screen.blit(l_surf, (right_x, y_start))
+
+            title_l = self.font.render("NEON DB TOP PILOTS", True, CYAN)
+            self.screen.blit(title_l, (right_x + 20, y_start + 20))
+
+            if self.leaderboard_cache:
+                for idx, row in enumerate(self.leaderboard_cache[:6]):
+                    name = (row.get("display_name") or "Pilot")[:12]
+                    score = row.get("high_score", 0)
+                    lvl = row.get("highest_level", 1)
+                    entry_txt = f"#{idx+1} {name:<12} {score:>5} pts  (Lv {lvl})"
+                    col = GOLD if idx == 0 else (WHITE if idx < 3 else MUTED)
+                    row_surf = self.small_font.render(entry_txt, True, col)
+                    self.screen.blit(row_surf, (right_x + 20, y_start + 70 + idx * 40))
+            else:
+                loading_txt = self.small_font.render("Syncing with Neon DB...", True, MUTED)
+                self.screen.blit(loading_txt, (right_x + 25, y_start + 90))
+
+            self.centered("Press Esc or Enter to return", self.small_font, 630, MUTED)
 
         else:
             self.draw_game()
@@ -1125,7 +1283,6 @@ class SpaceDodgeGame:
             shake_mag = (self.screen_shake ** 2) * 18.0
             ox = random.uniform(-shake_mag, shake_mag)
             oy = random.uniform(-shake_mag, shake_mag)
-            # Shift buffer
             shake_buffer = self.screen.copy()
             self.screen.fill(DARK_BG)
             self.screen.blit(shake_buffer, (int(ox), int(oy)))
@@ -1140,18 +1297,84 @@ class SpaceDodgeGame:
 
         if self.state == "menu":
             if event.key in (pygame.K_UP, pygame.K_DOWN):
-                self.menu_index = (self.menu_index + (1 if event.key == pygame.K_DOWN else -1)) % 4
+                self.menu_index = (self.menu_index + (1 if event.key == pygame.K_DOWN else -1)) % 5
             elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
                 if self.menu_index == 0:
                     self.start_game()
                 elif self.menu_index == 1:
-                    self.state = "settings"
+                    self.state = "auth"
+                    self.auth_menu_index = 0
+                    self.auth_input_mode = "select"
+                    self.auth_feedback = ("", WHITE)
                 elif self.menu_index == 2:
                     self.state = "statistics"
+                    self.refresh_leaderboard()
+                elif self.menu_index == 3:
+                    self.state = "settings"
                 else:
                     return False
             elif event.key == pygame.K_ESCAPE:
                 return False
+
+        elif self.state == "auth":
+            if self.auth_input_mode == "select":
+                if event.key in (pygame.K_UP, pygame.K_DOWN):
+                    self.auth_menu_index = (self.auth_menu_index + (1 if event.key == pygame.K_DOWN else -1)) % 6
+                elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                    if self.auth_menu_index == 0:
+                        self.auth_feedback = ("Waiting for Google login in browser...", CYAN)
+                        self.auth.start_google_sign_in(on_complete_callback=self._on_google_done)
+                    elif self.auth_menu_index == 1:
+                        self.auth_input_mode = "login"
+                        self.active_input_field = "email"
+                        self.auth_feedback = ("", WHITE)
+                    elif self.auth_menu_index == 2:
+                        self.auth_input_mode = "register"
+                        self.active_input_field = "email"
+                        self.auth_feedback = ("", WHITE)
+                    elif self.auth_menu_index == 3:
+                        self.auth.sign_in_as_guest()
+                        self.sync_user_session()
+                        self.auth_feedback = ("Active as Guest Pilot!", GOLD)
+                    elif self.auth_menu_index == 4:
+                        self.auth.sign_out()
+                        self.auth_feedback = ("Signed out successfully", MUTED)
+                    elif self.auth_menu_index == 5:
+                        self.state = "menu"
+                elif event.key == pygame.K_ESCAPE:
+                    self.state = "menu"
+
+            elif self.auth_input_mode in ("login", "register"):
+                if event.key == pygame.K_ESCAPE:
+                    self.auth_input_mode = "select"
+                    self.auth_feedback = ("", WHITE)
+                elif event.key == pygame.K_TAB:
+                    self.active_input_field = "password" if self.active_input_field == "email" else "email"
+                elif event.key == pygame.K_BACKSPACE:
+                    self.auth_inputs[self.active_input_field] = self.auth_inputs[self.active_input_field][:-1]
+                elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                    email = self.auth_inputs["email"].strip()
+                    password = self.auth_inputs["password"].strip()
+                    if not email or not password:
+                        self.auth_feedback = ("Please enter both email and password", RED)
+                    else:
+                        self.auth_feedback = ("Authenticating...", CYAN)
+                        def _do_auth():
+                            if self.auth_input_mode == "login":
+                                success, msg = self.auth.sign_in_email(email, password)
+                            else:
+                                success, msg = self.auth.sign_up_email(email, password)
+                            if success:
+                                self.sync_user_session()
+                                self.auth_input_mode = "select"
+                                self.auth_inputs = {"email": "", "password": ""}
+                                self.auth_feedback = (f"Welcome, {self.auth.current_user['display_name']}!", GOLD)
+                            else:
+                                self.auth_feedback = (msg, RED)
+                        threading.Thread(target=_do_auth, daemon=True).start()
+                else:
+                    if event.unicode and len(event.unicode) == 1 and 32 <= ord(event.unicode) <= 126:
+                        self.auth_inputs[self.active_input_field] += event.unicode
 
         elif self.state == "settings":
             if event.key in (pygame.K_UP, pygame.K_DOWN):
@@ -1174,8 +1397,8 @@ class SpaceDodgeGame:
             if event.key == pygame.K_p:
                 self.state = "paused"
             elif event.key == pygame.K_ESCAPE:
+                self.finish_game()
                 self.state = "menu"
-                self.save_data()
 
         elif self.state == "paused":
             if event.key in (pygame.K_p, pygame.K_ESCAPE):
@@ -1188,6 +1411,7 @@ class SpaceDodgeGame:
                 self.state = "menu"
 
         return True
+
 
     def run(self):
         running = True

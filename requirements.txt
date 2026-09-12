@@ -1,2 +1,6 @@
-'''Requirements'''
-pygame==2.6.1
+pygame>=2.5.0
+psycopg2-binary>=2.9.9
+requests>=2.31.0
+flask>=3.0.0
+flask-cors>=4.0.0
+gunicorn>=21.2.0
