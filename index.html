@@ -16,10 +16,6 @@
             --cyan-neon: #3aedff;
             --text: #ffffff;
             --text-muted: rgba(255, 255, 255, 0.65);
-            --card-bg: rgba(6, 14, 34, 0.75);
-            --card-border: rgba(0, 180, 255, 0.22);
-            --gold: #ffd741;
-            --green-glow: #00ffaa;
         }
 
         * {
@@ -118,42 +114,9 @@
             flex-direction: column;
             align-items: center;
             text-align: center;
-            margin-top: 130px;
+            margin-top: 150px;
             max-width: 1200px;
             padding: 0 20px;
-        }
-
-        .hero-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(0, 180, 255, 0.1);
-            border: 1px solid rgba(0, 210, 255, 0.35);
-            color: var(--cyan-neon);
-            padding: 7px 20px;
-            border-radius: 30px;
-            font-size: 13px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            margin-bottom: 28px;
-            backdrop-filter: blur(8px);
-            box-shadow: 0 0 20px rgba(0, 210, 255, 0.15);
-        }
-
-        .pulse-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--green-glow);
-            box-shadow: 0 0 10px var(--green-glow);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 170, 0.7); }
-            70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(0, 255, 170, 0); }
-            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 170, 0); }
         }
 
         .hero-title {
@@ -224,7 +187,7 @@
             display: flex;
             flex-direction: column;
             align-items: flex-start;
-            margin-top: 180px;
+            margin-top: 200px;
             max-width: 1100px;
             width: 100%;
             padding: 0 20px;
@@ -258,150 +221,22 @@
             color: var(--cyan-neon);
         }
 
-        /* Live Leaderboard & Cloud Stats Section */
-        .stats-section {
-            width: 100%;
-            max-width: 1100px;
-            margin-top: 140px;
-            display: grid;
-            grid-template-columns: 1.15fr 0.85fr;
-            gap: 32px;
-        }
-
         @media (max-width: 860px) {
-            .stats-section {
-                grid-template-columns: 1fr;
-            }
             .nav-links {
                 gap: 28px;
                 font-size: 20px;
             }
             .hero {
-                margin-top: 70px;
+                margin-top: 90px;
             }
             .how-to-play-section {
-                margin-top: 100px;
+                margin-top: 120px;
             }
-        }
-
-        .card-glass {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 16px;
-            padding: 32px;
-            backdrop-filter: blur(14px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(0, 100, 255, 0.08);
-        }
-
-        .card-title {
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--gold);
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-            padding-bottom: 12px;
-            letter-spacing: 0.5px;
-        }
-
-        .refresh-tag {
-            font-size: 11px;
-            color: var(--cyan-neon);
-            background: rgba(0, 210, 255, 0.12);
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-weight: 500;
-        }
-
-        table.leaderboard-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 15px;
-        }
-
-        table.leaderboard-table th {
-            text-align: left;
-            padding: 10px 8px;
-            color: var(--text-muted);
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        table.leaderboard-table td {
-            padding: 14px 8px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        table.leaderboard-table tr:first-child td {
-            color: var(--gold);
-            font-weight: 700;
-        }
-
-        .rank-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1);
-            font-size: 12px;
-            font-weight: 700;
-        }
-
-        tr:first-child .rank-badge {
-            background: var(--gold);
-            color: #000000;
-        }
-
-        /* API Badges */
-        .api-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            font-size: 14px;
-        }
-
-        .endpoint-code {
-            font-family: monospace;
-            background: rgba(0, 180, 255, 0.12);
-            color: var(--cyan-neon);
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-
-        .status-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .status-pill.online {
-            background: rgba(0, 255, 170, 0.15);
-            color: #00ffaa;
-            border: 1px solid rgba(0, 255, 170, 0.3);
-        }
-
-        .status-pill.loading {
-            background: rgba(255, 215, 65, 0.15);
-            color: var(--gold);
-            border: 1px solid rgba(255, 215, 65, 0.3);
         }
 
         /* Footer */
         footer {
-            margin-top: 140px;
+            margin-top: 160px;
             text-align: center;
             color: var(--text-muted);
             font-size: 14px;
@@ -433,7 +268,6 @@
             <div class="nav-links">
                 <a href="#home" class="nav-link active">Home</a>
                 <a href="#about" class="nav-link">About Game</a>
-                <a href="#leaderboard" class="nav-link">Leaderboard</a>
                 <a href="https://github.com/Ghostofzenin08/Meteor-Space-Dodge" target="_blank" class="nav-link">Contribute</a>
                 <a href="https://zeninxparth.itch.io/meteor-space-dodge" target="_blank" class="nav-link">Download</a>
             </div>
@@ -441,10 +275,6 @@
 
         <!-- Hero Section matching Figma -->
         <section class="hero" id="home">
-            <div class="hero-badge">
-                <span class="pulse-dot"></span>
-                <span id="badge-text">Neon DB Cloud Leaderboard Live</span>
-            </div>
             <h1 class="hero-title">DODGE THE METEORS. SURVIVE THE CHAOS.</h1>
             <p class="hero-subtitle">
                 Meteors are falling. Your mission is simple — stay alive, dodge everything, and beat your high score.
@@ -462,50 +292,6 @@
                 <li>Survive longer, earn more points, and beat your personal best.</li>
             </ul>
             <a href="https://zeninxparth.itch.io/meteor-space-dodge" target="_blank" class="btn-figma">Download Now</a>
-        </section>
-
-        <!-- Live Neon DB Leaderboard & Cloud Stats -->
-        <section class="stats-section" id="leaderboard">
-            <div class="card-glass">
-                <div class="card-title">
-                    <span>🏆 Top Cosmic Pilots</span>
-                    <span class="refresh-tag" id="sync-status">Syncing Neon DB...</span>
-                </div>
-                <div id="leaderboard-container">
-                    <p style="color: var(--text-muted); padding: 24px 0; text-align: center;">
-                        Fetching live high scores from Neon PostgreSQL cloud...
-                    </p>
-                </div>
-            </div>
-
-            <div class="card-glass">
-                <div class="card-title">
-                    <span>⚡ Cloud Microservices</span>
-                    <span class="status-pill loading" id="service-status">Connecting</span>
-                </div>
-                <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
-                    <div class="api-row">
-                        <span>Database</span>
-                        <span style="color: #34d399; font-weight: 600;">Neon PostgreSQL (AWS East)</span>
-                    </div>
-                    <div class="api-row">
-                        <span>Authentication</span>
-                        <span style="color: var(--cyan-neon);">Firebase (Google OAuth & Email)</span>
-                    </div>
-                    <div class="api-row">
-                        <span>Game Engine</span>
-                        <span>Pygame-CE 60 FPS Native</span>
-                    </div>
-                    <div class="api-row">
-                        <span>Hosting & Edge</span>
-                        <span style="color: #ffffff; font-weight: 600;">Vercel Edge Global CDN</span>
-                    </div>
-                    <div class="api-row">
-                        <span>Backend API</span>
-                        <span class="endpoint-code">https://meteor-space-dodge.onrender.com</span>
-                    </div>
-                </div>
-            </div>
         </section>
 
         <!-- Footer -->
@@ -707,111 +493,6 @@
         }
 
         requestAnimationFrame(render);
-
-        /* Dynamic Neon DB Leaderboard & Cloud Stats Fetcher (Client-side for Vercel) */
-        const API_BASE = "https://meteor-space-dodge.onrender.com";
-
-        async function fetchLeaderboard() {
-            const container = document.getElementById("leaderboard-container");
-            const syncStatus = document.getElementById("sync-status");
-            const serviceStatus = document.getElementById("service-status");
-
-            try {
-                const res = await fetch(`${API_BASE}/api/leaderboard?limit=10`);
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const data = await res.json();
-
-                if (data.success && data.leaderboard && data.leaderboard.length > 0) {
-                    let html = `
-                        <table class="leaderboard-table">
-                            <thead>
-                                <tr>
-                                    <th>Rank</th>
-                                    <th>Pilot</th>
-                                    <th>High Score</th>
-                                    <th>Max Level</th>
-                                    <th>Dodged</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                    `;
-
-                    data.leaderboard.forEach((pilot, idx) => {
-                        html += `
-                            <tr>
-                                <td><span class="rank-badge">${idx + 1}</span></td>
-                                <td style="font-weight: 600;">${escapeHtml(pilot.display_name || 'Pilot')}</td>
-                                <td style="color: var(--cyan-neon); font-weight: 700;">${pilot.high_score.toLocaleString()}</td>
-                                <td>Lv ${pilot.highest_level || 1}</td>
-                                <td>${(pilot.meteors_dodged || 0).toLocaleString()}</td>
-                            </tr>
-                        `;
-                    });
-
-                    html += `
-                            </tbody>
-                        </table>
-                    `;
-                    container.innerHTML = html;
-                    syncStatus.textContent = "Live Synced (Neon DB)";
-                    syncStatus.style.color = "#00ffaa";
-                } else {
-                    container.innerHTML = `
-                        <p style="color: var(--text-muted); padding: 24px 0; text-align: center;">
-                            No scores recorded yet. Download the game and claim Rank #1!
-                        </p>
-                    `;
-                    syncStatus.textContent = "Neon DB Ready";
-                }
-            } catch (err) {
-                console.warn("Leaderboard fetch error:", err);
-                container.innerHTML = `
-                    <div style="padding: 20px 0; text-align: center;">
-                        <p style="color: var(--gold); font-size: 14px; margin-bottom: 8px;">
-                            ☁️ Cloud backend is waking up (Render free tier spin-up)...
-                        </p>
-                        <p style="color: var(--text-muted); font-size: 12px;">Auto-retrying in a few seconds.</p>
-                    </div>
-                `;
-                syncStatus.textContent = "Waking Up...";
-                setTimeout(fetchLeaderboard, 6000);
-            }
-        }
-
-        async function checkHealth() {
-            const serviceStatus = document.getElementById("service-status");
-            try {
-                const res = await fetch(`${API_BASE}/api/health`);
-                const data = await res.json();
-                if (data.status === "healthy") {
-                    serviceStatus.textContent = "Online";
-                    serviceStatus.className = "status-pill online";
-                } else {
-                    serviceStatus.textContent = "Standby";
-                    serviceStatus.className = "status-pill loading";
-                }
-            } catch (e) {
-                serviceStatus.textContent = "Standby";
-                serviceStatus.className = "status-pill loading";
-            }
-        }
-
-        function escapeHtml(str) {
-            return String(str).replace(/[&<>"']/g, s => ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#39;'
-            }[s]));
-        }
-
-        // Initialize API calls
-        fetchLeaderboard();
-        checkHealth();
-        // Refresh every 30 seconds
-        setInterval(fetchLeaderboard, 30000);
-        setInterval(checkHealth, 60000);
     </script>
 </body>
 </html>
