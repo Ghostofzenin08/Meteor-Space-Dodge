@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meteor Space Dodge — Dodge the Meteors. Survive the Chaos.</title>
+    <meta name="description" content="Meteors are falling. Stay alive, dodge everything, and beat your high score in Meteor Space Dodge by ZeninXParth.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Patrick+Hand&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #000000;
+            --blue-glow: #00d2ff;
+            --blue-deep: #0044ff;
+            --cyan-neon: #3aedff;
+            --text: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.65);
+            --card-bg: rgba(6, 14, 34, 0.75);
+            --card-border: rgba(0, 180, 255, 0.22);
+            --gold: #ffd741;
+            --green-glow: #00ffaa;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        /* WebGL Background Canvas for Blue Meteor Shader */
+        #shader-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Content Wrapper */
+        .content-layer {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            min-height: 100vh;
+            padding: 0 24px 80px;
+        }
+
+        /* Top Navigation (Figma Spec) */
+        nav {
+            width: 100%;
+            max-width: 1200px;
+            padding: 42px 20px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 64px;
+            font-family: 'Patrick Hand', cursive, sans-serif;
+            font-size: 26px;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.5);
+            text-decoration: none;
+            position: relative;
+            transition: color 0.25s ease, opacity 0.25s;
+            cursor: pointer;
+        }
+
+        .nav-link:hover {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .nav-link.active {
+            color: #ffffff;
+            opacity: 1;
+        }
+
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #ffffff;
+            border-radius: 2px;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+        }
+
+        /* Hero Section (Figma Spec) */
+        .hero {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin-top: 130px;
+            max-width: 1200px;
+            padding: 0 20px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 180, 255, 0.1);
+            border: 1px solid rgba(0, 210, 255, 0.35);
+            color: var(--cyan-neon);
+            padding: 7px 20px;
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 28px;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.15);
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green-glow);
+            box-shadow: 0 0 10px var(--green-glow);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 170, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(0, 255, 170, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 255, 170, 0); }
+        }
+
+        .hero-title {
+            font-size: clamp(38px, 5.8vw, 76px);
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: #ffffff;
+            margin-bottom: 24px;
+            text-shadow: 0 4px 30px rgba(0, 180, 255, 0.35), 0 0 60px rgba(0, 100, 255, 0.2);
+        }
+
+        .hero-subtitle {
+            font-size: clamp(20px, 2.5vw, 34px);
+            font-weight: 400;
+            line-height: 1.45;
+            color: rgba(255, 255, 255, 0.85);
+            max-width: 980px;
+            margin-bottom: 48px;
+        }
+
+        /* Figma Wireframe Button */
+        .btn-figma {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 260px;
+            height: 68px;
+            padding: 0 36px;
+            border: 1.5px solid #ffffff;
+            border-radius: 10px;
+            background: transparent;
+            color: #ffffff;
+            font-size: 22px;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(6px);
+        }
+
+        .btn-figma::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 210, 255, 0.25), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .btn-figma:hover {
+            border-color: var(--cyan-neon);
+            color: #ffffff;
+            background: rgba(0, 180, 255, 0.15);
+            box-shadow: 0 0 25px rgba(0, 210, 255, 0.4), inset 0 0 15px rgba(0, 210, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .btn-figma:hover::before {
+            left: 100%;
+        }
+
+        /* How to Play Section (Figma Spec) */
+        .how-to-play-section {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-top: 180px;
+            max-width: 1100px;
+            width: 100%;
+            padding: 0 20px;
+        }
+
+        .section-heading {
+            font-size: clamp(28px, 3.5vw, 44px);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #ffffff;
+            margin-bottom: 48px;
+            width: 100%;
+            text-align: center;
+            text-shadow: 0 0 25px rgba(0, 210, 255, 0.3);
+        }
+
+        .instruction-list {
+            list-style-type: disc;
+            padding-left: 48px;
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+            font-size: clamp(18px, 2.2vw, 28px);
+            color: rgba(255, 255, 255, 0.78);
+            line-height: 1.4;
+            margin-bottom: 64px;
+        }
+
+        .instruction-list li::marker {
+            color: var(--cyan-neon);
+        }
+
+        /* Live Leaderboard & Cloud Stats Section */
+        .stats-section {
+            width: 100%;
+            max-width: 1100px;
+            margin-top: 140px;
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr;
+            gap: 32px;
+        }
+
+        @media (max-width: 860px) {
+            .stats-section {
+                grid-template-columns: 1fr;
+            }
+            .nav-links {
+                gap: 28px;
+                font-size: 20px;
+            }
+            .hero {
+                margin-top: 70px;
+            }
+            .how-to-play-section {
+                margin-top: 100px;
+            }
+        }
+
+        .card-glass {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 32px;
+            backdrop-filter: blur(14px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 25px rgba(0, 100, 255, 0.08);
+        }
+
+        .card-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--gold);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .refresh-tag {
+            font-size: 11px;
+            color: var(--cyan-neon);
+            background: rgba(0, 210, 255, 0.12);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        table.leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 15px;
+        }
+
+        table.leaderboard-table th {
+            text-align: left;
+            padding: 10px 8px;
+            color: var(--text-muted);
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        table.leaderboard-table td {
+            padding: 14px 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        table.leaderboard-table tr:first-child td {
+            color: var(--gold);
+            font-weight: 700;
+        }
+
+        .rank-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        tr:first-child .rank-badge {
+            background: var(--gold);
+            color: #000000;
+        }
+
+        /* API Badges */
+        .api-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 14px;
+        }
+
+        .endpoint-code {
+            font-family: monospace;
+            background: rgba(0, 180, 255, 0.12);
+            color: var(--cyan-neon);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-pill.online {
+            background: rgba(0, 255, 170, 0.15);
+            color: #00ffaa;
+            border: 1px solid rgba(0, 255, 170, 0.3);
+        }
+
+        .status-pill.loading {
+            background: rgba(255, 215, 65, 0.15);
+            color: var(--gold);
+            border: 1px solid rgba(255, 215, 65, 0.3);
+        }
+
+        /* Footer */
+        footer {
+            margin-top: 140px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        footer a {
+            color: var(--cyan-neon);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        footer a:hover {
+            color: #ffffff;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- WebGL Canvas for Procedural Blue Meteor Shader -->
+    <canvas id="shader-canvas"></canvas>
+
+    <div class="content-layer">
+        <!-- Top Navigation matching Figma -->
+        <nav>
+            <div class="nav-links">
+                <a href="#home" class="nav-link active">Home</a>
+                <a href="#about" class="nav-link">About Game</a>
+                <a href="#leaderboard" class="nav-link">Leaderboard</a>
+                <a href="https://github.com/Ghostofzenin08/Meteor-Space-Dodge" target="_blank" class="nav-link">Contribute</a>
+                <a href="https://zeninxparth.itch.io/meteor-space-dodge" target="_blank" class="nav-link">Download</a>
+            </div>
+        </nav>
+
+        <!-- Hero Section matching Figma -->
+        <section class="hero" id="home">
+            <div class="hero-badge">
+                <span class="pulse-dot"></span>
+                <span id="badge-text">Neon DB Cloud Leaderboard Live</span>
+            </div>
+            <h1 class="hero-title">DODGE THE METEORS. SURVIVE THE CHAOS.</h1>
+            <p class="hero-subtitle">
+                Meteors are falling. Your mission is simple — stay alive, dodge everything, and beat your high score.
+            </p>
+            <a href="https://zeninxparth.itch.io/meteor-space-dodge" target="_blank" class="btn-figma">Play Now</a>
+        </section>
+
+        <!-- How To Play Section matching Figma -->
+        <section class="how-to-play-section" id="about">
+            <h2 class="section-heading">HOW TO PLAY</h2>
+            <ul class="instruction-list">
+                <li>Control your Spaceship and move across the arena.</li>
+                <li>Watch the sky and avoid every incoming meteor.</li>
+                <li>Stay alive as long as possible while the difficulty increases.</li>
+                <li>Survive longer, earn more points, and beat your personal best.</li>
+            </ul>
+            <a href="https://zeninxparth.itch.io/meteor-space-dodge" target="_blank" class="btn-figma">Download Now</a>
+        </section>
+
+        <!-- Live Neon DB Leaderboard & Cloud Stats -->
+        <section class="stats-section" id="leaderboard">
+            <div class="card-glass">
+                <div class="card-title">
+                    <span>🏆 Top Cosmic Pilots</span>
+                    <span class="refresh-tag" id="sync-status">Syncing Neon DB...</span>
+                </div>
+                <div id="leaderboard-container">
+                    <p style="color: var(--text-muted); padding: 24px 0; text-align: center;">
+                        Fetching live high scores from Neon PostgreSQL cloud...
+                    </p>
+                </div>
+            </div>
+
+            <div class="card-glass">
+                <div class="card-title">
+                    <span>⚡ Cloud Microservices</span>
+                    <span class="status-pill loading" id="service-status">Connecting</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
+                    <div class="api-row">
+                        <span>Database</span>
+                        <span style="color: #34d399; font-weight: 600;">Neon PostgreSQL (AWS East)</span>
+                    </div>
+                    <div class="api-row">
+                        <span>Authentication</span>
+                        <span style="color: var(--cyan-neon);">Firebase (Google OAuth & Email)</span>
+                    </div>
+                    <div class="api-row">
+                        <span>Game Engine</span>
+                        <span>Pygame-CE 60 FPS Native</span>
+                    </div>
+                    <div class="api-row">
+                        <span>Hosting & Edge</span>
+                        <span style="color: #ffffff; font-weight: 600;">Vercel Edge Global CDN</span>
+                    </div>
+                    <div class="api-row">
+                        <span>Backend API</span>
+                        <span class="endpoint-code">https://meteor-space-dodge.onrender.com</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <p>Developed with passion by <strong>ZeninXParth</strong> (<a href="https://github.com/Ghostofzenin08" target="_blank">Ghostofzenin08</a> &amp; <a href="https://github.com/parthongit89" target="_blank">parthongit89</a>)</p>
+            <p>Official Store: <a href="https://zeninxparth.itch.io" target="_blank">zeninxparth.itch.io</a> | Source: <a href="https://github.com/Ghostofzenin08/Meteor-Space-Dodge" target="_blank">GitHub Repository</a></p>
+        </footer>
+    </div>
+
+    <!-- Blue Meteor WebGL GLSL Shader Engine -->
+    <script>
+        const canvas = document.getElementById("shader-canvas");
+        const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+
+        if (!gl) {
+            console.warn("WebGL not supported, falling back to static background.");
+        }
+
+        // Vertex Shader
+        const vsSource = `
+            attribute vec2 a_position;
+            void main() {
+                gl_Position = vec4(a_position, 0.0, 1.0);
+            }
+        `;
+
+        // Fragment Shader: Deep Cosmic Blue Meteor Shower with Ionization Trails & Particle Sparkles
+        const fsSource = `
+            precision highp float;
+            uniform vec2 u_resolution;
+            uniform float u_time;
+            uniform vec2 u_mouse;
+
+            // Random hash generator
+            float hash(vec2 p) {
+                p = fract(p * vec2(123.34, 456.21));
+                p += dot(p, p + 45.32);
+                return fract(p.x * p.y);
+            }
+
+            // Pseudo-random noise
+            float noise(vec2 p) {
+                vec2 i = floor(p);
+                vec2 f = fract(p);
+                f = f * f * (3.0 - 2.0 * f);
+                float a = hash(i);
+                float b = hash(i + vec2(1.0, 0.0));
+                float c = hash(i + vec2(0.0, 1.0));
+                float d = hash(i + vec2(1.0, 1.0));
+                return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+            }
+
+            // Draw a single electric blue falling meteor streak
+            float meteor(vec2 uv, vec2 startPos, float speed, float length, float seed) {
+                float t = fract(u_time * speed + seed);
+                vec2 dir = normalize(vec2(-0.45, -0.89)); // Diagonal downward trajectory
+                vec2 pos = startPos + dir * (t * 2.5);
+
+                // Distance from line segment
+                vec2 p = uv - pos;
+                float proj = clamp(dot(p, -dir), 0.0, length);
+                vec2 closest = pos - dir * proj;
+                float d = length(uv - closest);
+
+                // Intense glowing head
+                float head = smoothstep(0.015, 0.002, length(uv - pos));
+                
+                // Ionized burning tail fade
+                float tailFade = smoothstep(length, 0.0, proj);
+                float tail = smoothstep(0.009, 0.0005, d) * tailFade;
+
+                // Atmospheric blue glow around trail
+                float halo = 0.005 / (d + 0.004) * tailFade * 0.45;
+
+                return head * 2.5 + tail * 1.6 + halo;
+            }
+
+            void main() {
+                vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+                vec2 aspectUV = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / u_resolution.y;
+
+                // Deep space gradient (pitch black at top to dark midnight cyan at bottom)
+                vec3 spaceCol = mix(vec3(0.0, 0.008, 0.025), vec3(0.002, 0.025, 0.075), uv.y * 0.85);
+
+                // Soft cosmic nebula clouds in electric blue
+                float neb = noise(aspectUV * 2.2 + vec2(u_time * 0.03, u_time * 0.02));
+                neb += 0.5 * noise(aspectUV * 4.5 - vec2(u_time * 0.05, -u_time * 0.03));
+                spaceCol += vec3(0.0, 0.12, 0.35) * pow(neb, 2.4) * 0.55;
+
+                // Subtle twinkling starfield
+                vec2 starGrid = floor(aspectUV * 75.0);
+                float starRnd = hash(starGrid);
+                if (starRnd > 0.965) {
+                    float twinkle = sin(u_time * 2.5 + starRnd * 6.28) * 0.5 + 0.5;
+                    float starDist = length(fract(aspectUV * 75.0) - 0.5);
+                    float starLight = smoothstep(0.06, 0.0, starDist) * twinkle;
+                    spaceCol += vec3(0.65, 0.85, 1.0) * starLight * 0.9;
+                }
+
+                // Blue Meteors Array (Multiple trajectories with random seeds and speeds)
+                float meteorsTotal = 0.0;
+                meteorsTotal += meteor(aspectUV, vec2(0.95, 0.85), 0.38, 0.42, 0.12);
+                meteorsTotal += meteor(aspectUV, vec2(0.35, 0.95), 0.45, 0.38, 0.47);
+                meteorsTotal += meteor(aspectUV, vec2(-0.25, 0.90), 0.32, 0.50, 0.83);
+                meteorsTotal += meteor(aspectUV, vec2(0.65, 0.75), 0.52, 0.32, 0.29);
+                meteorsTotal += meteor(aspectUV, vec2(-0.65, 0.80), 0.28, 0.48, 0.65);
+                meteorsTotal += meteor(aspectUV, vec2(0.10, 0.88), 0.40, 0.36, 0.91);
+
+                // Vibrant Electric Blue & Cyan Meteor Palette
+                vec3 meteorCore = vec3(0.9, 0.98, 1.0);     // Blinding white-hot core
+                vec3 meteorGlow = vec3(0.0, 0.82, 1.0);     // Vivid Cyan
+                vec3 meteorTail = vec3(0.0, 0.25, 0.95);    // Deep Electric Royal Blue
+
+                vec3 meteorCol = mix(meteorTail, meteorGlow, min(1.0, meteorsTotal));
+                meteorCol = mix(meteorCol, meteorCore, smoothstep(1.2, 2.8, meteorsTotal));
+
+                vec3 finalColor = spaceCol + meteorCol * meteorsTotal;
+
+                // Subtle vignette effect
+                float vig = 1.0 - length(uv - 0.5) * 0.65;
+                finalColor *= vig;
+
+                gl_FragColor = vec4(finalColor, 1.0);
+            }
+        `;
+
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error("Shader compile error: ", gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            return shader;
+        }
+
+        const vertexShader = createShader(gl, gl.VERTEX_SHADER, vsSource);
+        const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fsSource);
+        const program = gl.createProgram();
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        gl.linkProgram(program);
+
+        if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+            console.error("Program link error: ", gl.getProgramInfoLog(program));
+        }
+
+        const positionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+            -1, -1,
+             1, -1,
+            -1,  1,
+            -1,  1,
+             1, -1,
+             1,  1,
+        ]), gl.STATIC_DRAW);
+
+        const aPositionLocation = gl.getAttribLocation(program, "a_position");
+        const uResolutionLocation = gl.getUniformLocation(program, "u_resolution");
+        const uTimeLocation = gl.getUniformLocation(program, "u_time");
+        const uMouseLocation = gl.getUniformLocation(program, "u_mouse");
+
+        let mouseX = 0.5;
+        let mouseY = 0.5;
+
+        window.addEventListener("mousemove", (e) => {
+            mouseX = e.clientX / window.innerWidth;
+            mouseY = 1.0 - (e.clientY / window.innerHeight);
+        });
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth * window.devicePixelRatio;
+            canvas.height = window.innerHeight * window.devicePixelRatio;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+        }
+
+        window.addEventListener("resize", resizeCanvas);
+        resizeCanvas();
+
+        const startTime = performance.now();
+
+        function render() {
+            const currentTime = (performance.now() - startTime) * 0.001;
+
+            gl.useProgram(program);
+            gl.enableVertexAttribArray(aPositionLocation);
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            gl.vertexAttribPointer(aPositionLocation, 2, gl.FLOAT, false, 0, 0);
+
+            gl.uniform2f(uResolutionLocation, canvas.width, canvas.height);
+            gl.uniform1f(uTimeLocation, currentTime);
+            gl.uniform2f(uMouseLocation, mouseX, mouseY);
+
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+            requestAnimationFrame(render);
+        }
+
+        requestAnimationFrame(render);
+
+        /* Dynamic Neon DB Leaderboard & Cloud Stats Fetcher (Client-side for Vercel) */
+        const API_BASE = "https://meteor-space-dodge.onrender.com";
+
+        async function fetchLeaderboard() {
+            const container = document.getElementById("leaderboard-container");
+            const syncStatus = document.getElementById("sync-status");
+            const serviceStatus = document.getElementById("service-status");
+
+            try {
+                const res = await fetch(`${API_BASE}/api/leaderboard?limit=10`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+
+                if (data.success && data.leaderboard && data.leaderboard.length > 0) {
+                    let html = `
+                        <table class="leaderboard-table">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Pilot</th>
+                                    <th>High Score</th>
+                                    <th>Max Level</th>
+                                    <th>Dodged</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+
+                    data.leaderboard.forEach((pilot, idx) => {
+                        html += `
+                            <tr>
+                                <td><span class="rank-badge">${idx + 1}</span></td>
+                                <td style="font-weight: 600;">${escapeHtml(pilot.display_name || 'Pilot')}</td>
+                                <td style="color: var(--cyan-neon); font-weight: 700;">${pilot.high_score.toLocaleString()}</td>
+                                <td>Lv ${pilot.highest_level || 1}</td>
+                                <td>${(pilot.meteors_dodged || 0).toLocaleString()}</td>
+                            </tr>
+                        `;
+                    });
+
+                    html += `
+                            </tbody>
+                        </table>
+                    `;
+                    container.innerHTML = html;
+                    syncStatus.textContent = "Live Synced (Neon DB)";
+                    syncStatus.style.color = "#00ffaa";
+                } else {
+                    container.innerHTML = `
+                        <p style="color: var(--text-muted); padding: 24px 0; text-align: center;">
+                            No scores recorded yet. Download the game and claim Rank #1!
+                        </p>
+                    `;
+                    syncStatus.textContent = "Neon DB Ready";
+                }
+            } catch (err) {
+                console.warn("Leaderboard fetch error:", err);
+                container.innerHTML = `
+                    <div style="padding: 20px 0; text-align: center;">
+                        <p style="color: var(--gold); font-size: 14px; margin-bottom: 8px;">
+                            ☁️ Cloud backend is waking up (Render free tier spin-up)...
+                        </p>
+                        <p style="color: var(--text-muted); font-size: 12px;">Auto-retrying in a few seconds.</p>
+                    </div>
+                `;
+                syncStatus.textContent = "Waking Up...";
+                setTimeout(fetchLeaderboard, 6000);
+            }
+        }
+
+        async function checkHealth() {
+            const serviceStatus = document.getElementById("service-status");
+            try {
+                const res = await fetch(`${API_BASE}/api/health`);
+                const data = await res.json();
+                if (data.status === "healthy") {
+                    serviceStatus.textContent = "Online";
+                    serviceStatus.className = "status-pill online";
+                } else {
+                    serviceStatus.textContent = "Standby";
+                    serviceStatus.className = "status-pill loading";
+                }
+            } catch (e) {
+                serviceStatus.textContent = "Standby";
+                serviceStatus.className = "status-pill loading";
+            }
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"']/g, s => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[s]));
+        }
+
+        // Initialize API calls
+        fetchLeaderboard();
+        checkHealth();
+        // Refresh every 30 seconds
+        setInterval(fetchLeaderboard, 30000);
+        setInterval(checkHealth, 60000);
+    </script>
+</body>
+</html>

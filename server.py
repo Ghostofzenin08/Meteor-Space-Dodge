@@ -1,6 +1,6 @@
 import os
 import sys
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template, render_template_string
 from flask_cors import CORS
 
 try:
@@ -236,8 +236,21 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 
 @app.route("/", methods=["GET"])
 def index():
-    """Web dashboard showing Neon DB status and top leaderboard."""
-    leaderboard = db.get_leaderboard(limit=10)
+    """Landing page matching Figma design with WebGL Blue Meteor Shader & Live Leaderboard."""
+    try:
+        leaderboard = db.get_leaderboard(limit=10)
+    except Exception as e:
+        print(f"Error fetching leaderboard: {e}")
+        leaderboard = []
+
+    templates_dir = os.path.join(BASE_DIR, "templates")
+    template_path = os.path.join(templates_dir, "index.html")
+    if os.path.exists(template_path):
+        return render_template(
+            "index.html",
+            leaderboard=leaderboard,
+            firebase_project=FIREBASE_PROJECT_ID
+        )
     return render_template_string(
         DASHBOARD_HTML,
         leaderboard=leaderboard,
